@@ -1,5 +1,7 @@
 # mail-auth
 
+[🇮🇷 توضیحات فارسی](README-fa.md)
+
 **Check it, fix it, prove it.** An Agent Skill + deterministic checker
 for a domain's email authentication — SPF, DKIM, DMARC, MX, MTA-STS,
 TLS-RPT — that prints the exact DNS records to publish and re-checks
