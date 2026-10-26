@@ -1,0 +1,55 @@
+---
+description: Check a domain's email authentication (SPF, DKIM, DMARC, MX, MTA-STS, TLS-RPT) with a deterministic checker, print the exact DNS records to publish, and re-check until propagation completes. Apply whenever mail "goes to spam", "never arrives", "fails authentication", when a domain moves to a new host or mail provider, or when onboarding a business whose mail setup was never checked.
+globs: "**/*.{md,txt,json,yaml,yml}"
+alwaysApply: false
+---
+
+# Mail authentication — check it, fix it, prove it
+
+## The contract
+
+1. **Check first, with the tool — never guess.** Run the checker
+   (zero-dependency, pure stdlib, own DNS client):
+
+   ```bash
+   python3 scripts/mail_auth.py <domain> [--json] [--fix]
+   ```
+
+   Exit codes: `0` = no errors · `1` = errors found · `2` = the
+   resolver did not answer.
+2. **The fix is exact records, not advice.** With `--fix` the tool
+   prints the TXT records to publish. Provider-specific values are
+   placeholders — an SPF include and a DKIM key can only come from the
+   mail provider. Never invent them, never copy a key from another
+   domain, never publish a self-generated DKIM key as the provider's.
+3. **Prove the fix with a re-check loop.** DNS takes minutes to hours
+   to propagate. Do not report mail as fixed after publishing records:
+
+   ```bash
+   python3 scripts/mail_auth.py <domain> --recheck 12 --interval 300
+   ```
+
+   Quote the final `0 errors` line in your report.
+4. **Know the limit — and say it.** Passing SPF, DKIM and DMARC is
+   necessary, not sufficient, for inbox placement. Reputation,
+   engagement and volume still decide whether Gmail delivers to the
+   inbox or to spam. The checker proves authentication; it does not
+   prove deliverability.
+
+## What each check means
+
+- **SPF** — who may send as this domain. Missing = anyone can forge
+  it. Over 10 DNS lookups = receivers stop evaluating. `+all` =
+  the whole internet is authorised.
+- **DMARC** — what receivers do with failing mail. `p=none` only
+  watches; roll out none → quarantine → reject, reading the aggregate
+  reports at each step. No `rua=` = you never see the reports.
+- **DKIM** — signature from the sender; key must come from the mail
+  provider. Under 1024 bits is weak, 2048 bits is the recommendation.
+- **MX** — informational only; a send-only domain legitimately has
+  none. **MTA-STS / TLS-RPT** — informational in v1.
+
+See `skills/mail-auth/SKILL.md` for the full contract,
+`references/dns-records.md` for what each record means, and
+`references/fix-playbook.md` for the staged DMARC rollout and common
+provider SPF includes.
